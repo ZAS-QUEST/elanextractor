@@ -35,7 +35,8 @@ def countVernacularWords(root,timeslots):
                     for sublist in [av.text.split() 
                                     for av in t.findall(".//ANNOTATION_VALUE")
                                     if av.text!=None] 
-                    for val in sublist]          
+                    for val in sublist]  
+        #compute a list of durations of each annotation by substracting start times from end times
         timelist = [(int(timeslots[aa.attrib["TIME_SLOT_REF2"]])-int(timeslots[aa.attrib["TIME_SLOT_REF1"]])) 
                     for aa in t.findall(".//ALIGNABLE_ANNOTATION")
                     if aa.find(".//ANNOTATION_VALUE").text!=None
@@ -84,7 +85,7 @@ if __name__ == "__main__":
           hours = str(datetime.timedelta(seconds=globalsecs)).split('.')[0] #convert to human readable format
         except TypeError:
           print("skipping %s" % eaf)
-    print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs),os.getcwd(),hours, globalwords))
+    print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs),os.getcwd().split('/')[-1],hours, globalwords))
       
     
       

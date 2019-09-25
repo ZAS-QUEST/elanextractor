@@ -61,8 +61,7 @@ if __name__ == "__main__":
     print(filename)
     root = etree.parse(filename)
     timeslots = getTimeslots(root)
-    results = countVernacularWords(root,timeslots)
-    print(results)
+    results = countVernacularWords(root,timeslots) 
     for result in results:
       print("\t%s@%s: %s words (%s seconds)" % result)    
   except IndexError: #no positional argument provided. We analyze all eaf files in directory

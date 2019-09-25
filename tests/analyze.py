@@ -5,6 +5,10 @@ import datetime
 import os 
 
 def getTimeslots(root):
+  """
+  Create a dictionary with time slot ID as keys and offset in ms as values
+  """
+  
   timeorder = root.find(".//TIME_ORDER")
   timeslots = dict([(slot.attrib["TIME_SLOT_ID"],slot.attrib["TIME_VALUE"]) 
                     for slot in timeorder.findall("TIME_SLOT")
@@ -12,8 +16,14 @@ def getTimeslots(root):
   return timeslots
 
 def countVernacularWords(root,timeslots):
+  """
+  Retrieve tiers with transcription in an ELAN file. 
+  Return the ID of the first tier found, the linguistic type matched, aggregate number of words, aggregate time. 
+  """
+  
   #the LINGUISTIC_TYPE_REF's which contain vernacular sentences
   candidates = ['Text', 'transcription', 'word-txt', 'word', 'UtteranceType']
+  results = []
   for candidate in candidates:   
     #try different LINGUISTIC_TYPE_REF's to identify the relevant tiers
     querystring = "TIER[@LINGUISTIC_TYPE_REF='%s']"%candidate 
@@ -29,26 +39,36 @@ def countVernacularWords(root,timeslots):
         timelist = [(int(timeslots[aa.attrib["TIME_SLOT_REF2"]])-int(timeslots[aa.attrib["TIME_SLOT_REF1"]])) 
                     for aa in t.findall(".//ALIGNABLE_ANNOTATION")
                     if aa.find(".//ANNOTATION_VALUE").text!=None
-                    ]     
-        #if wordlist != []:
-        #print(timelist)
-        #print(dict(timeslots))
+                    ]      
         secs = sum(timelist)/1000
         #output the amount found with tier type and ID
-        return t.attrib["TIER_ID"],candidate,len(wordlist),secs #now returns on first nonzero candidate. #FIXME better check all candidates before  returning
+        results.append((t.attrib["TIER_ID"],candidate,len(wordlist),secs)) 
+  return results  
     
-if __name__ == "__main__":
+if __name__ == "__main__":  
+  """
+  usage: > python3 analyze.py myfile.eaf
+  The script checks for tiers which contain transcribed text in an given ELAN file
+  The words in this tier are counter and if possible matched to time codes
+  
+  usage: > python3 analyze.py 
+  As above, but for all files in directory. Aggregate sums for words and time are given. 
+  
+  """
   try:
     filename = sys.argv[1]
     print(filename)
     root = etree.parse(filename)
     timeslots = getTimeslots(root)
-    result = countVernacularWords(root,timeslots)
-    print("\t%s@%s: %s words (%s seconds)" % result)
-  except IndexError:
+    results = countVernacularWords(root,timeslots)
+    print(results)
+    for result in results:
+      print("\t%s@%s: %s words (%s seconds)" % result)    
+  except IndexError: #no positional argument provided. We analyze all eaf files in directory
     eafs = glob.glob("./*eaf")
     globalwords = 0
     globalsecs = 0
+    hours = "00:00:00"
     for eaf in eafs: 
       root = etree.parse(eaf)
       try:
@@ -56,13 +76,14 @@ if __name__ == "__main__":
       except KeyError: 
         print("skipping %s (no time slots)" % eaf)
         continue
-      result = countVernacularWords(root,timeslots)
-      try:
-        globalwords += result[2]
-        globalsecs += result[3]
-        hours = str(datetime.timedelta(seconds=globalsecs)).split('.')[0]
-      except TypeError:
-        print("skipping %s" % eaf)
+      results = countVernacularWords(root,timeslots)
+      for result in results:
+        try:
+          globalwords += result[2] #aggregate words 
+          globalsecs += result[3] #aggregate time
+          hours = str(datetime.timedelta(seconds=globalsecs)).split('.')[0] #convert to human readable format
+        except TypeError:
+          print("skipping %s" % eaf)
     print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs),os.getcwd(),hours, globalwords))
       
     

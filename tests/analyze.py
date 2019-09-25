@@ -17,7 +17,7 @@ def getTimeslots(root):
 
 def getAlignableAnnotations(root):
   """
-  Create a dictionary with time slot ID as keys and offset in ms as values
+  Create a dictionary with alignable annotations ID as keys and the elements themselves as values
   """
   
   aas = root.findall(".//ALIGNABLE_ANNOTATION") 
@@ -27,6 +27,10 @@ def getAlignableAnnotations(root):
   return d
 
 def getDuration(annotation):
+  """
+  compute a list of durations of each annotation by substracting start times from end times
+  """
+  
   try:
     return int(timeslots[annotation.attrib["TIME_SLOT_REF2"]])-int(timeslots[annotation.attrib["TIME_SLOT_REF1"]])
   except AttributeError:
@@ -54,11 +58,12 @@ def countVernacularWords(root,timeslots,alignableannotations):
                                     for av in t.findall(".//ANNOTATION_VALUE")
                                     if av.text!=None] 
                     for val in sublist]  
-        #compute a list of durations of each annotation by substracting start times from end times
+        #get a list of duration from the time slots directly mentioned in annotations
         timelist = [getDuration(aa) 
                     for aa in t.findall(".//ALIGNABLE_ANNOTATION")
                     if aa.find(".//ANNOTATION_VALUE").text!=None
                     ]      
+        #get a list of durations from time slots mentioned in parent elements
         timelistannno = [getDuration(alignableannotations.get(ra.attrib["ANNOTATION_REF"])) 
                     for ra in t.findall(".//REF_ANNOTATION")
                     if ra.find(".//ANNOTATION_VALUE").text!=None
@@ -109,7 +114,3 @@ if __name__ == "__main__":
         except TypeError:
           print("skipping %s" % eaf)
     print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs),os.getcwd().split('/')[-1],hours, globalwords))
-      
-    
-      
-  

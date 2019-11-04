@@ -1,8 +1,8 @@
+import os 
 import sys
-from lxml import etree
 import glob
 import datetime
-import os 
+from lxml import etree 
 
 def getTimeslots(root):
   """
@@ -74,43 +74,53 @@ def countVernacularWords(root,timeslots,alignableannotations):
   return results  
     
 if __name__ == "__main__":  
-  """
-  usage: > python3 analyze.py myfile.eaf
-  The script checks for tiers which contain transcribed text in an given ELAN file
-  The words in this tier are counter and if possible matched to time codes
-  
-  usage: > python3 analyze.py 
-  As above, but for all files in directory. Aggregate sums for words and time are given. 
-  
-  """
-  try:
-    filename = sys.argv[1]
+    """
+    usage: > python3 analyze.py myfile.eaf
+    The script checks for tiers which contain transcribed text in an given ELAN file
+    The words in this tier are counter and if possible matched to time codes
+    
+    usage: > python3 analyze.py 
+    As above, but for all files in directory. Aggregate sums for words and time are given. 
+    
+    """
+    try:
+            filename = sys.argv[1]
+    except IndexError: #no positional argument provided. Default is working directory
+            filename = '.'
     print(filename)
-    root = etree.parse(filename)
-    timeslots = getTimeslots(root)
-    alignableannotations = getAlignableAnnotations(root)
-    results = countVernacularWords(root,timeslots,alignableannotations) 
-    for result in results:
-      print("\t%s@%s: %s words (%s seconds)" % result)    
-  except IndexError: #no positional argument provided. We analyze all eaf files in directory
-    eafs = glob.glob("./*eaf")
-    globalwords = 0
-    globalsecs = 0
-    hours = "00:00:00"
-    for eaf in eafs: 
-      root = etree.parse(eaf)
-      try:
+    if os.path.isfile(filename):
+        root = etree.parse(filename)
         timeslots = getTimeslots(root)
-      except KeyError: 
-        print("skipping %s (no time slots)" % eaf)
-        continue
-      alignableannotations = getAlignableAnnotations(root)
-      results = countVernacularWords(root,timeslots,alignableannotations)
-      for result in results:
-        try:
-          globalwords += result[2] #aggregate words 
-          globalsecs += result[3] #aggregate time
-          hours = str(datetime.timedelta(seconds=globalsecs)).split('.')[0] #convert to human readable format
-        except TypeError:
-          print("skipping %s" % eaf)
-    print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs),os.getcwd().split('/')[-1],hours, globalwords))
+        alignableannotations = getAlignableAnnotations(root)
+        results = countVernacularWords(root,timeslots,alignableannotations) 
+        for result in results:
+            print("\t%s@%s: %s words (%s seconds)" % result)    
+    elif os.path.isdir(filename):
+        eafs = glob.glob("%s/*eaf"%filename)
+        print(eafs)
+        globalwords = 0
+        globalsecs = 0
+        hours = "00:00:00"
+        for eaf in eafs: 
+            try:
+                root = etree.parse(eaf)
+            except etree.XMLSyntaxError:
+                print("empty document", eaf)
+                continue
+            try:
+                timeslots = getTimeslots(root)
+            except KeyError: 
+                print("skipping %s (no time slots)" % eaf)
+                continue
+            alignableannotations = getAlignableAnnotations(root)
+            results = countVernacularWords(root,timeslots,alignableannotations)
+            for result in results:
+                try:
+                    globalwords += result[2] #aggregate words 
+                    globalsecs += result[3] #aggregate time
+                    hours = str(datetime.timedelta(seconds=globalsecs)).split('.')[0] #convert to human readable format
+                except TypeError:
+                    print("skipping %s" % eaf)
+        print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs),filename,hours, globalwords))
+    else:
+        print("path %s could not be found" %filename)

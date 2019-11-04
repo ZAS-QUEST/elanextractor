@@ -3,6 +3,8 @@ import sys
 import glob
 import datetime
 from lxml import etree 
+import logging
+logging.basicConfig(filename='elanstatistics.log',level=logging.WARNING)
 
 def getTimeslots(root):
   """
@@ -44,7 +46,21 @@ def countVernacularWords(root,timeslots,alignableannotations):
   """
   
   #the LINGUISTIC_TYPE_REF's which contain vernacular sentences
-  candidates = ['Text', 'transcription', 'word-txt', 'interlinear-text-item', 'UtteranceType']
+  candidates = [
+        'interlinear-text-item', 
+        'Nese Utterances',
+        'po (practical orthography)'
+        't', 
+        #'tx', #check usages of this        
+        'text',
+        'Text',
+        'transcription', 
+        'Transcription',
+        'ut', 
+        'utterance transcription',
+        'UtteranceType', 
+        'word-txt', 
+      ]
   results = []
   for candidate in candidates:   
     #try different LINGUISTIC_TYPE_REF's to identify the relevant tiers
@@ -96,8 +112,7 @@ if __name__ == "__main__":
         for result in results:
             print("\t%s@%s: %s words (%s seconds)" % result)    
     elif os.path.isdir(filename):
-        eafs = glob.glob("%s/*eaf"%filename)
-        print(eafs)
+        eafs = glob.glob("%s/*eaf"%filename) 
         globalwords = 0
         globalsecs = 0
         hours = "00:00:00"
@@ -105,12 +120,13 @@ if __name__ == "__main__":
             try:
                 root = etree.parse(eaf)
             except etree.XMLSyntaxError:
-                print("empty document", eaf)
+                logging.warning("empty document %s"% eaf)
                 continue
             try:
                 timeslots = getTimeslots(root)
             except KeyError: 
-                print("skipping %s (no time slots)" % eaf)
+                
+                logging.warning("skipping %s (no time slots)" % eaf)
                 continue
             alignableannotations = getAlignableAnnotations(root)
             results = countVernacularWords(root,timeslots,alignableannotations)

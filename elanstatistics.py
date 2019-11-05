@@ -5,9 +5,10 @@ import datetime
 import json
 from lxml import etree 
 from langdetect import detect_langs, lang_detect_exception  #for language identification in transcriptions
-langdetectthreshold = .95
+langdetectthreshold = .95 #85% seems to have no false positives in a first run
 import logging
 logging.basicConfig(filename='elanstatistics.log',level=logging.WARNING)
+
 
 def getTimeslots(root):
   """
@@ -20,6 +21,7 @@ def getTimeslots(root):
                     ])
   return timeslots
 
+
 def getAlignableAnnotations(root):
   """
   Create a dictionary with alignable annotations ID as keys and the elements themselves as values
@@ -30,6 +32,7 @@ def getAlignableAnnotations(root):
                     for aa in aas 
                     ]) 
   return d
+
 
 def getDuration(annotation):
   """
@@ -94,6 +97,8 @@ def countVernacularWords(root,timeslots,alignableannotations):
 
 
 def summarizeTranscription(root,timeslots,alignableannotations):       
+    """ compute total amounts of words and seconds transcribed """
+    
     results = countVernacularWords(root,timeslots,alignableannotations) 
     localwords = 0
     localsecs = 0
@@ -104,6 +109,12 @@ def summarizeTranscription(root,timeslots,alignableannotations):
         
     
 def getTranslations(filename,root): 
+    """
+    Check for tiers which contain translations. 
+    If tiers are not empty, check whether language is English 
+    Return a list of all tiers with lists of all words they contain in linear order 
+    """
+        
     translationcandidates = [
         'eng', 
         'english translation',
@@ -134,28 +145,29 @@ def getTranslations(filename,root):
         querystring = "TIER[@LINGUISTIC_TYPE_REF='%s']"%candidate 
         translationtiers = root.findall(querystring) 
         if translationtiers != []: #we found a tier of the linguistic type
-            for t in translationtiers: 
-                #print(t.attrib["LINGUISTIC_TYPE_REF"])
-                #create a list of all words in that tier by splitting and collating all annotation values of that tier
+            for t in translationtiers:  
+                #create a list of all words in that tier
                 wordlist = [av.text for av   
                                     in t.findall(".//ANNOTATION_VALUE")
                                     if av.text!=None
                             ]  
                 if wordlist == []:
                     continue 
-                try:
+                #sometimes, annotators put non-English contents in translation tiers
+                #for our purposes, we want to discard such content
+                try: #detect candidate languages and retrieve most likely one
                     toplanguage = detect_langs(' '.join(wordlist) )[0] 
                 except lang_detect_exception.LangDetectException:
                     logging.warning("could not detect language for %s in %s"%(wordlist, filename))
                     continue
                 if toplanguage.lang != 'en':
                     continue
-                if toplanguage.prob < langdetectthreshold:
+                if toplanguage.prob < langdetectthreshold: #language is English, but likelihood is too small
+                    logging.warning('ignored %.2f%% probability English for "%s ..."' %(toplanguage.prob*100,' '.join(wordlist)[:100]))
                     continue  
                 translations.append(wordlist)
     return translations
-                
-                
+                                
     
 if __name__ == "__main__":  
     """
@@ -169,16 +181,15 @@ if __name__ == "__main__":
     As above, but for all files in directory.  
     
     usage: > python3 elanstatistics.py 
-    As above, but for working directory . 
-    
-    
+    As above, but for working directory .       
     """
+    
     try:
             filename = sys.argv[1]
     except IndexError: #no positional argument provided. Default is working directory
             filename = '.'
     print("processing", filename)
-    if os.path.isfile(filename):
+    if os.path.isfile(filename): #argument is a single file
         root = etree.parse(filename)
         timeslots = getTimeslots(root)
         alignableannotations = getAlignableAnnotations(root) 
@@ -186,14 +197,17 @@ if __name__ == "__main__":
         print("%s words (%s seconds)" % (seconds, words))   
         translations = getTranslations(filename, root)
         translationsummary = [len(x) for x in translations]
-        #print("translation lengths (#words) in %s : %s" %(filename,[len(x) for x in translations]))       
-    elif os.path.isdir(filename):
-        limit = 1300
+        print("translation length: %s words" %(sum([len(x) for x in translations])))       
+    elif os.path.isdir(filename): #argument is a directory
+        limit = 999999999
+        #limit = 1300 #for development purposes, only process a subset of a directory
         eafs = glob.glob("%s/*eaf"%filename)[:limit]
+        #default values for output
         globalwords = 0
         globalsecs = 0
         hours = "00:00:00"
-        eaftranslations = {} 
+        
+        eaftranslations = {} #match filenames with the translations they contain
         for eaf in eafs:  
             try:
                 root = etree.parse(eaf)
@@ -205,19 +219,24 @@ if __name__ == "__main__":
             except KeyError:                 
                 logging.warning("skipping %s (no time slots)" % eaf)
                 continue
+            #get transcription info
             alignableannotations = getAlignableAnnotations(root)                   
             transcriptionresults = summarizeTranscription(root,timeslots,alignableannotations)
             globalwords += transcriptionresults[0]
             globalsecs += transcriptionresults[1]
-                   
+            #get translation info
             translations = getTranslations(eaf, root)
             eaftranslations[eaf] = translations
             translationsummary = [len(x) for x in translations]
+        
+        #compute statistics
         englishwordcount = sum([len(tier) for key in eaftranslations for tier in eaftranslations[key]])
         hours = str(datetime.timedelta(seconds=globalsecs)).split('.')[0] #convert to human readable format 
+        #save translations
         with open('translations.json', 'w') as jsonfile: 
             jsonfile.write(json.dumps(eaftranslations))
+        #print results
         print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs), filename, hours, globalwords))
         print("Total translations into English have %i words in %i files of directory %s/ (of total %i files)" % (englishwordcount, len([x for x in eaftranslations if eaftranslations[x] != []]), os.path.abspath(filename).split('/')[-1], len(eaftranslations)))
-    else:
+    else: #invalid argument
         print("path %s could not be found" %filename)

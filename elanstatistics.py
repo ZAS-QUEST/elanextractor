@@ -2,6 +2,7 @@ import os
 import sys
 import glob
 import datetime
+import json
 from lxml import etree 
 from langdetect import detect_langs, lang_detect_exception  #for language identification in transcriptions
 langdetectthreshold = .95
@@ -172,13 +173,13 @@ if __name__ == "__main__":
         alignableannotations = getAlignableAnnotations(root) 
         #summarizeTranscription(root,timeslots,alignableannotations)  
         translations = getTranslations(filename, root)
-        print("translation lengths (#words) in %s : %s" %(filename,[len(x) for x in translations]))
-        print()
+        #print("translation lengths (#words) in %s : %s" %(filename,[len(x) for x in translations])) 
     elif os.path.isdir(filename):
-        eafs = glob.glob("%s/*eaf"%filename) 
+        eafs = glob.glob("%s/*eaf"%filename)[:130]
         globalwords = 0
         globalsecs = 0
         hours = "00:00:00"
+        eaftranslations = {}
         englishwordcount = 0
         for eaf in eafs: 
             try:
@@ -203,11 +204,14 @@ if __name__ == "__main__":
                 #except TypeError:
                     #print("skipping %s" % eaf)
             translations = getTranslations(eaf, root)
+            eaftranslations[eaf] = translations
             translationsummary = [len(x) for x in translations]
-            if translationsummary != []:
-                print("translation lengths (#words) in %s : %s" %(eaf,translationsummary))  
-            englishwordcount += sum (translationsummary)
+            #if translationsummary != []:
+                #print("translation lengths (#words) in %s : %s" %(eaf,translationsummary))  
+            englishwordcount = sum([len(tier) for key in eaftranslations for tier in eaftranslations[key]])
         #print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs),filename,hours, globalwords))
-        print("Total translations into English have %i words" %englishwordcount)
+        with open('translations.json', 'w') as jsonfile: 
+            jsonfile.write(json.dumps(eaftranslations))
+        print("Total translations into English have %i words in %i files (of total %i)" % (englishwordcount, len([x for x in eaftranslations if eaftranslations[x] != []]), len(eaftranslations)))
     else:
         print("path %s could not be found" %filename)

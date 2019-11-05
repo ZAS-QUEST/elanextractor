@@ -95,8 +95,13 @@ def countVernacularWords(root,timeslots,alignableannotations):
 
 def summarizeTranscription(root,timeslots,alignableannotations):       
     results = countVernacularWords(root,timeslots,alignableannotations) 
+    localwords = 0
+    localsecs = 0
     for result in results:
-        print("\t%s@%s: %s words (%s seconds)" % result)  
+        localwords += result[2] #aggregate words 
+        localsecs += result[3] #aggregate time )      
+    return localwords, localsecs
+        
     
 def getTranslations(filename,root): 
     translationcandidates = [
@@ -154,34 +159,42 @@ def getTranslations(filename,root):
     
 if __name__ == "__main__":  
     """
-    usage: > python3 analyze.py myfile.eaf
+    usage: > python3 elanstatistics.py myfile.eaf
     The script checks for tiers which contain transcribed text in an given ELAN file
-    The words in this tier are counter and if possible matched to time codes
+    The words in this tier are counted and if possible matched to time codes
+    Tiers which look like translation tiers are checked whether they contain English translations. 
+    Words in translation tiers are counted and the tally is printed.
     
-    usage: > python3 analyze.py 
-    As above, but for all files in directory. Aggregate sums for words and time are given. 
+    usage: > python3 elanstatistics.py somedirectory
+    As above, but for all files in directory.  
+    
+    usage: > python3 elanstatistics.py 
+    As above, but for working directory . 
+    
     
     """
     try:
             filename = sys.argv[1]
     except IndexError: #no positional argument provided. Default is working directory
             filename = '.'
-    print(filename)
+    print("processing", filename)
     if os.path.isfile(filename):
         root = etree.parse(filename)
         timeslots = getTimeslots(root)
         alignableannotations = getAlignableAnnotations(root) 
-        #summarizeTranscription(root,timeslots,alignableannotations)  
+        seconds, words = summarizeTranscription(root,timeslots,alignableannotations) 
+        print("%s words (%s seconds)" % (seconds, words))   
         translations = getTranslations(filename, root)
-        #print("translation lengths (#words) in %s : %s" %(filename,[len(x) for x in translations])) 
+        translationsummary = [len(x) for x in translations]
+        #print("translation lengths (#words) in %s : %s" %(filename,[len(x) for x in translations]))       
     elif os.path.isdir(filename):
-        eafs = glob.glob("%s/*eaf"%filename)[:130]
+        limit = 1300
+        eafs = glob.glob("%s/*eaf"%filename)[:limit]
         globalwords = 0
         globalsecs = 0
         hours = "00:00:00"
-        eaftranslations = {}
-        englishwordcount = 0
-        for eaf in eafs: 
+        eaftranslations = {} 
+        for eaf in eafs:  
             try:
                 root = etree.parse(eaf)
             except etree.XMLSyntaxError:
@@ -189,29 +202,22 @@ if __name__ == "__main__":
                 continue
             try:
                 timeslots = getTimeslots(root)
-            except KeyError: 
-                
+            except KeyError:                 
                 logging.warning("skipping %s (no time slots)" % eaf)
                 continue
-            alignableannotations = getAlignableAnnotations(root)            
-            #results = countVernacularWords(root,timeslots,alignableannotations)
-            ##TODO this should go in the summarizeTranscription function
-            #for result in results:
-                #try:
-                    #globalwords += result[2] #aggregate words 
-                    #globalsecs += result[3] #aggregate time
-                    #hours = str(datetime.timedelta(seconds=globalsecs)).split('.')[0] #convert to human readable format
-                #except TypeError:
-                    #print("skipping %s" % eaf)
+            alignableannotations = getAlignableAnnotations(root)                   
+            transcriptionresults = summarizeTranscription(root,timeslots,alignableannotations)
+            globalwords += transcriptionresults[0]
+            globalsecs += transcriptionresults[1]
+                   
             translations = getTranslations(eaf, root)
             eaftranslations[eaf] = translations
             translationsummary = [len(x) for x in translations]
-            #if translationsummary != []:
-                #print("translation lengths (#words) in %s : %s" %(eaf,translationsummary))  
-            englishwordcount = sum([len(tier) for key in eaftranslations for tier in eaftranslations[key]])
-        #print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs),filename,hours, globalwords))
+        englishwordcount = sum([len(tier) for key in eaftranslations for tier in eaftranslations[key]])
+        hours = str(datetime.timedelta(seconds=globalsecs)).split('.')[0] #convert to human readable format 
         with open('translations.json', 'w') as jsonfile: 
             jsonfile.write(json.dumps(eaftranslations))
-        print("Total translations into English have %i words in %i files (of total %i)" % (englishwordcount, len([x for x in eaftranslations if eaftranslations[x] != []]), len(eaftranslations)))
+        print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs), filename, hours, globalwords))
+        print("Total translations into English have %i words in %i files of directory %s/ (of total %i files)" % (englishwordcount, len([x for x in eaftranslations if eaftranslations[x] != []]), os.path.abspath(filename).split('/')[-1], len(eaftranslations)))
     else:
         print("path %s could not be found" %filename)

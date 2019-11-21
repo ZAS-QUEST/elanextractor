@@ -1,19 +1,19 @@
 import glob
 import sys
-import pprint   
+import pprint
 from collections import Counter
 from collections import defaultdict
 from lxml import etree
 
 
 
-def analyze_tier(d, level):  
+def analyze_tier(d, level):
     """analyze a tier and its children"""
-    
+
     global accumulator
     global tierconstraints
     constraint = d['constraint']
-    code = 'x'   
+    code = 'x'
     if constraint == 'Symbolic_Subdivision':
         code = 's'
     elif constraint == 'Symbolic_Association':
@@ -28,46 +28,46 @@ def analyze_tier(d, level):
         code = 'x'
     else:
         print(repr(constraint))
-        0/0 
+        0/0
     #accumulator += "%s%s--%s\n"%('  '*level, d['id'], constraint)
     accumulator += "%s%s%s|"%('.'*level, '', code)
-    for child in dico.get(d['id'], []): 
-        analyze_tier(child, level+1)  
-            
+    for child in dico.get(d['id'], []):
+        analyze_tier(child, level+1)
+
 def check_tiers(filename):
     """
-    check the tiers there are in a given file and 
+    check the tiers there are in a given file and
     return a fingerprint describing the structure
     Dots indicate the level
-    The type of a tier is indicated by 
-    - s: subdivision  
-    - a: association 
+    The type of a tier is indicated by
+    - s: subdivision
+    - a: association
     - x: anything else
-    """ 
-    
+    """
+
     #due to memory constraints we use global variables
     global accumulator
     global dico
     global tierconstraints
-    
+
     accumulator = ''
     dico = defaultdict(list)
     tree = etree.parse(filename)
-    linguistic_types = tree.findall(".//LINGUISTIC_TYPE")   
+    linguistic_types = tree.findall(".//LINGUISTIC_TYPE")
     #map tier IDs to their constraints
     tierconstraints = {lt.attrib["LINGUISTIC_TYPE_ID"]:lt.attrib.get("CONSTRAINTS") for lt in linguistic_types}
-    tiers = tree.findall(".//TIER")   
-    for tier in tiers: 
+    tiers = tree.findall(".//TIER")
+    for tier in tiers:
         ID = tier.attrib["TIER_ID"]
         #map all tiers to their parent tiers, defaulting to the file itself
-        PARENT_REF = tier.attrib.get("PARENT_REF",(filename))
+        PARENT_REF = tier.attrib.get("PARENT_REF", (filename))
         ltype = tier.attrib["LINGUISTIC_TYPE_REF"]
         constraint = tierconstraints[ltype]
         dico[PARENT_REF].append({'id': ID,
-                                'constraint': constraint,
-                                'ltype': ltype
+                                 'constraint': constraint,
+                                 'ltype': ltype
                                 }
-                               ) 
+                               )
     #start with dummy tier
     analyze_tier({'id':filename,
                   'constraint': '',
@@ -80,9 +80,9 @@ def check_tiers(filename):
 if __name__ == "__main__":
     # retrieve all ELAN files and check for tiers
     # analyze tiers for each file
-    # fingerprint each file 
-    # tally fingerprints and show the results 
-    
+    # fingerprint each file
+    # tally fingerprints and show the results
+
     LIMIT = 1111
     DEFAULTDIRECTORY = 'elareafs'
     directory = DEFAULTDIRECTORY
@@ -90,15 +90,14 @@ if __name__ == "__main__":
         directory = sys.argv[1]
     except IndexError:
         pass
-    fingerprints =  [check_tiers(f) for f in glob.glob("%s/*eaf"%directory)[:LIMIT]]
+    fingerprints = [check_tiers(f) for f in glob.glob("%s/*eaf"%directory)[:LIMIT]]
     #count occurences
-    counted_fingerprints = Counter(fingerprints)    
+    counted_fingerprints = Counter(fingerprints)
     #sort by number of occurences and print
     ranks = [(counted_fingerprints[key], key) for key in counted_fingerprints.keys()]
-    print("\n".join(
-                    ["%s:%s" % x 
-                    for x 
-                    in sorted(ranks)[::-1]
+    print("\n".join(["%s:%s" % x
+                     for x
+                     in sorted(ranks)[::-1]
                     ]
-                  )
-        ) 
+                   )
+         )

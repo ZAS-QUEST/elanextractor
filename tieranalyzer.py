@@ -7,7 +7,9 @@ from lxml import etree
 
 
 
-def traverse_(d, level):  
+def analyze_tier(d, level):  
+    """analyze a tier and its children"""
+    
     global accumulator
     global tierconstraints
     constraint = d['constraint']
@@ -16,6 +18,10 @@ def traverse_(d, level):
         code = 's'
     elif constraint == 'Symbolic_Association':
         code = 'a'
+    elif constraint == 'Time_Subdivision':
+        code = 't'
+    elif constraint == 'Included_In':
+        code = 'i'
     elif constraint == '':
         code = 'x'
     elif constraint is None:
@@ -26,48 +32,57 @@ def traverse_(d, level):
     #accumulator += "%s%s--%s\n"%('  '*level, d['id'], constraint)
     accumulator += "%s%s%s|"%('.'*level, '', code)
     for child in dico.get(d['id'], []): 
-        traverse_(child, level+1)  
+        analyze_tier(child, level+1)  
             
 def check_tiers(filename):
-    """check how many tiers there are in a given file""" 
+    """
+    check the tiers there are in a given file and 
+    return a fingerprint describing the structure
+    Dots indicate the level
+    The type of a tier is indicated by 
+    - s: subdivision  
+    - a: association 
+    - x: anything else
+    """ 
+    
+    #due to memory constraints we use global variables
     global accumulator
-    accumulator = ''
     global dico
+    global tierconstraints
+    
+    accumulator = ''
     dico = defaultdict(list)
-    #print(filename)
     tree = etree.parse(filename)
     linguistic_types = tree.findall(".//LINGUISTIC_TYPE")   
-    global tierconstraints
+    #map tier IDs to their constraints
     tierconstraints = {lt.attrib["LINGUISTIC_TYPE_ID"]:lt.attrib.get("CONSTRAINTS") for lt in linguistic_types}
-    #pprint.pprint(tierconstraints)
     tiers = tree.findall(".//TIER")   
-    #dico = defaultdict(list)
     for tier in tiers: 
         ID = tier.attrib["TIER_ID"]
+        #map all tiers to their parent tiers, defaulting to the file itself
         PARENT_REF = tier.attrib.get("PARENT_REF",(filename))
-        LTYPE = tier.attrib["LINGUISTIC_TYPE_REF"]
-        CONSTRAINT = tierconstraints[LTYPE]
-        dico[PARENT_REF].append({'id':ID,
-                                'constraint': CONSTRAINT,
-                                'ltype': LTYPE
+        ltype = tier.attrib["LINGUISTIC_TYPE_REF"]
+        constraint = tierconstraints[ltype]
+        dico[PARENT_REF].append({'id': ID,
+                                'constraint': constraint,
+                                'ltype': ltype
                                 }
-                               )
-    #pprint.pprint(dico)
-    traverse_({'id':filename,
-               'constraint': '',
-               'ltype': ''
-               },
-                0
-              )
-    #print(accumulator)
+                               ) 
+    #start with dummy tier
+    analyze_tier({'id':filename,
+                  'constraint': '',
+                  'ltype': ''
+                 },
+                 0
+                )
     return accumulator
-    #count = len(tiers)
-    #return count
 
 if __name__ == "__main__":
     # retrieve all ELAN files and check for tiers
-    # count tiers for each file
-    # print how many tiers are found in how many files
+    # analyze tiers for each file
+    # fingerprint each file 
+    # tally fingerprints and show the results 
+    
     LIMIT = 1111
     DEFAULTDIRECTORY = 'elareafs'
     directory = DEFAULTDIRECTORY
@@ -75,17 +90,15 @@ if __name__ == "__main__":
         directory = sys.argv[1]
     except IndexError:
         pass
-    HASHES =  [check_tiers(f) for f in glob.glob("%s/*eaf"%directory)[:LIMIT]]
-    COUNTED_HASHES = Counter(HASHES)    
-    ranks = [(COUNTED_HASHES[key], key) for key in COUNTED_HASHES.keys()]
+    fingerprints =  [check_tiers(f) for f in glob.glob("%s/*eaf"%directory)[:LIMIT]]
+    #count occurences
+    counted_fingerprints = Counter(fingerprints)    
+    #sort by number of occurences and print
+    ranks = [(counted_fingerprints[key], key) for key in counted_fingerprints.keys()]
     print("\n".join(
                     ["%s:%s" % x 
                     for x 
                     in sorted(ranks)[::-1]
                     ]
                   )
-        )
-    #TIERCOUNTS = [check_tiers(f) for f in glob.glob("%s/*"%directory)[:LIMIT]]
-    #COUNTED_COUNTS = Counter(TIERCOUNTS)
-    #for key in sorted(COUNTED_COUNTS.keys()):
-        #print(key, COUNTED_COUNTS[key])
+        ) 

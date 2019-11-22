@@ -52,7 +52,10 @@ def check_tiers(filename):
 
     accumulator = ''
     dico = defaultdict(list)
-    tree = etree.parse(filename)
+    try:
+        tree = etree.parse(filename)
+    except etree.XMLSyntaxError:
+        return ''
     linguistic_types = tree.findall(".//LINGUISTIC_TYPE")
     #map tier IDs to their constraints
     tierconstraints = {lt.attrib["LINGUISTIC_TYPE_ID"]:lt.attrib.get("CONSTRAINTS") for lt in linguistic_types}

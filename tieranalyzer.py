@@ -30,9 +30,16 @@ def analyze_tier(d, level):
         print(repr(constraint))
         0/0
     #accumulator += "%s%s--%s\n"%('  '*level, d['id'], constraint)
-    accumulator += "%s%s%s|"%('.'*level, '', code)
-    for child in dico.get(d['id'], []):
-        analyze_tier(child, level+1)
+    #accumulator += "%s%s%s|"%('.'*level, '', code)
+    accumulator += code
+    children = dico[d['id']] 
+    if children == []:
+        return
+    accumulator += '['
+    for child in children:
+        analyze_tier(child, level+1)        
+    accumulator += ']'
+        
 
 def check_tiers(filename):
     """
@@ -50,7 +57,7 @@ def check_tiers(filename):
     global dico
     global tierconstraints
 
-    accumulator = ''
+    accumulator = '['
     dico = defaultdict(list)
     try:
         tree = etree.parse(filename)
@@ -77,7 +84,8 @@ def check_tiers(filename):
                   'ltype': ''
                  },
                  0
-                )
+                )    
+    accumulator += ']'
     return accumulator
 
 if __name__ == "__main__":
@@ -86,7 +94,8 @@ if __name__ == "__main__":
     # fingerprint each file
     # tally fingerprints and show the results
 
-    LIMIT = 1111
+    LIMIT = 999999
+    # LIMIT = 1111
     DEFAULTDIRECTORY = 'elareafs'
     directory = DEFAULTDIRECTORY
     try:

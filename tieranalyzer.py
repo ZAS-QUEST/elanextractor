@@ -14,11 +14,11 @@ def analyze_tier(d, level):
     global tierconstraints
     constraint = d['constraint']
     code = 'x'
-    if constraint == 'Symbolic_Subdivision':
+    if constraint == 'Symbolic_Subdivision' or constraint == 'Symbolic Subdivision':
         code = 's'
-    elif constraint == 'Symbolic_Association':
+    elif constraint == 'Symbolic_Association' or constraint == 'Symbolic Association' :
         code = 'a'
-    elif constraint == 'Time_Subdivision':
+    elif constraint == 'Time_Subdivision' or constraint == 'Time Subdivision':
         code = 't'
     elif constraint == 'Included_In':
         code = 'i'
@@ -72,7 +72,11 @@ def check_tiers(filename):
         #map all tiers to their parent tiers, defaulting to the file itself
         PARENT_REF = tier.attrib.get("PARENT_REF", (filename))
         ltype = tier.attrib["LINGUISTIC_TYPE_REF"]
-        constraint = tierconstraints[ltype]
+        try:
+            constraint = tierconstraints[ltype]
+        except KeyError:
+            print("reference to unknown LINGUISTIC_TYPE_ID  %s when establishing constraints in %s" %(ltype,filename))
+            continue
         dico[PARENT_REF].append({'id': ID,
                                  'constraint': constraint,
                                  'ltype': ltype

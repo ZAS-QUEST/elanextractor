@@ -53,12 +53,25 @@ def countVernacularWords(root,timeslots,alignableannotations,filename):
   
   #the LINGUISTIC_TYPE_REF's which contain vernacular sentences
   transcriptioncandidates = [
+        'arta',
+        'Arta',
+        'conversación',
         'default-lt',#needs qualification
         'default-lt',
+        'en', #very experimental, could be used for English but is used in 0214 files
         'Fonética',
+        'Frases', 
         'Hablado',
-        'interlinear-text-item',    
+        'Hija',
+        'hija',
+        'ilokano',
+        'interlinear-text-item',
+        'Ikaan sentences',
+        'Khanty Speech',  
         'main-tier',
+        'Madre',
+        'madre',
+        'Matanvat text',
         'Nese Utterances',
         'po (practical orthography)'
         'o', 
@@ -68,19 +81,33 @@ def countVernacularWords(root,timeslots,alignableannotations,filename):
         'orthografia',
         'orthografía',
         'orthography',
+        'po (practical orthography)',
+        'Phrases',
+        'Practical Orthography',
         'sentences',
+        'Sumi',
         't',#check this
+        'Tamang',
         'text',
         'Text',
+        'texto',
+        'Texto',
+        'texto ',
         'time aligned',#check this
+        'timed chunk',
         'tl',#check this
         'transcript', 
         'transcription', 
+        'transcription', 
+        'transcription_orthography',
         'trs',
         'Transcription',
-        'Transcripcíon',
+        'Transcripción',
         'Transcrição',
+        'TRANSCRIÇÃO',
         'tx', #check usages of this 
+        'tx2', #check usages of this 
+        'txt',
         'type_utterance',
         'unit', #some Dutch texts from TLA
         'ut', 
@@ -100,13 +127,18 @@ def countVernacularWords(root,timeslots,alignableannotations,filename):
         'words', 
         'Words',
         'default transcript',
+        '句子',
+        '句子 ',
+        '句子 '
       ]
   results = []
+  tierfound = False
   for candidate in transcriptioncandidates:   
         #try different LINGUISTIC_TYPE_REF's to identify the relevant tiers
         querystring = "TIER[@LINGUISTIC_TYPE_REF='%s']"%candidate 
         vernaculartiers = root.findall(querystring)
         if vernaculartiers != []: #we found a tier of the linguistic type
+            tierfound = True
             for t in vernaculartiers: 
                 #create a list of all words in that tier by splitting and collating all annotation values of that tier
                 wordlist = [av.text
@@ -130,8 +162,8 @@ def countVernacularWords(root,timeslots,alignableannotations,filename):
                 secs = sum(timelist+timelistannno)/1000          
                 #output the amount found with tier type and ID
                 results.append((t.attrib["TIER_ID"],candidate,wordlist,secs)) 
-  if results == []:
-      print(filename, [x.attrib["LINGUISTIC_TYPE_ID"] for x in root.findall(".//LINGUISTIC_TYPE")])
+  if not tierfound: #there is no tier of the relevant type 
+      print(filename, list(set([x.attrib["LINGUISTIC_TYPE_REF"] for x in root.findall(".//TIER")]))) 
   return results  
 
 
@@ -175,11 +207,14 @@ def getTranslations(filename,root):
         'tn (translation in lingua franca)',
         'trad',
         'traduccion', 
+        'traducción',
+        'traducción ', 
         'Traducción',
         'Traduction',
         'translation', 
         'translations', 
         'Translation', 
+        '翻译'
       ]
     translations = []
     for candidate in translationcandidates:  

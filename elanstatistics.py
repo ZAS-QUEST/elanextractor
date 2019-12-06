@@ -45,7 +45,7 @@ def getDuration(annotation):
     return 0
   
 
-def countVernacularWords(root,timeslots,alignableannotations):
+def countVernacularWords(root,timeslots,alignableannotations,filename):
   """
   Retrieve tiers with transcription in an ELAN file. 
   Return the ID of the first tier found, the linguistic type matched, aggregate number of words, aggregate time. 
@@ -53,19 +53,53 @@ def countVernacularWords(root,timeslots,alignableannotations):
   
   #the LINGUISTIC_TYPE_REF's which contain vernacular sentences
   transcriptioncandidates = [
-        'interlinear-text-item', 
+        'default-lt',#needs qualification
+        'default-lt',
+        'Fonética',
+        'Hablado',
+        'interlinear-text-item',    
+        'main-tier',
         'Nese Utterances',
         'po (practical orthography)'
-        't', 
-        #'tx', #check usages of this        
+        'o', 
+        'or',   
+        'orth',
+        'orthT',
+        'orthografia',
+        'orthografía',
+        'orthography',
+        'sentences',
+        't',#check this
         'text',
         'Text',
+        'time aligned',#check this
+        'tl',#check this
+        'transcript', 
         'transcription', 
+        'trs',
         'Transcription',
+        'Transcripcíon',
+        'Transcrição',
+        'tx', #check usages of this 
+        'type_utterance',
+        'unit', #some Dutch texts from TLA
         'ut', 
+        'Utterance',
+        'utterance',
+        'utterances',
         'utterance transcription',
         'UtteranceType', 
+        'vernacular', 
+        'Vernacular', 
+        'vilela',
+        'Vilela',
         'word-txt', 
+        'Word', 
+        'word', 
+        'word_orthography',
+        'words', 
+        'Words',
+        'default transcript',
       ]
   results = []
   for candidate in transcriptioncandidates:   
@@ -75,11 +109,14 @@ def countVernacularWords(root,timeslots,alignableannotations):
         if vernaculartiers != []: #we found a tier of the linguistic type
             for t in vernaculartiers: 
                 #create a list of all words in that tier by splitting and collating all annotation values of that tier
-                wordlist = [val #flatten list
-                            for sublist in [av.text.split() 
+                wordlist = [av.text
+                            #val #flatten list
+                            #for sublist in [av.text.split() 
                                             for av in t.findall(".//ANNOTATION_VALUE")
-                                            if av.text!=None] 
-                            for val in sublist]  
+                                            if av.text!=None
+                                            #] 
+                            #for val in sublist
+                            ]  
                 #get a list of duration from the time slots directly mentioned in annotations
                 timelist = [getDuration(aa) 
                             for aa in t.findall(".//ALIGNABLE_ANNOTATION")
@@ -92,18 +129,20 @@ def countVernacularWords(root,timeslots,alignableannotations):
                             ]     
                 secs = sum(timelist+timelistannno)/1000          
                 #output the amount found with tier type and ID
-                results.append((t.attrib["TIER_ID"],candidate,len(wordlist),secs)) 
+                results.append((t.attrib["TIER_ID"],candidate,wordlist,secs)) 
+  if results == []:
+      print(filename, [x.attrib["LINGUISTIC_TYPE_ID"] for x in root.findall(".//LINGUISTIC_TYPE")])
   return results  
 
 
-def summarizeTranscription(root,timeslots,alignableannotations):       
+def summarizeTranscription(root,timeslots,alignableannotations,filename):       
     """ compute total amounts of words and seconds transcribed """
     
-    results = countVernacularWords(root,timeslots,alignableannotations) 
-    localwords = 0
+    results = countVernacularWords(root,timeslots,alignableannotations, filename) 
+    localwords = []
     localsecs = 0
     for result in results:
-        localwords += result[2] #aggregate words 
+        localwords.append(result[2]) #aggregate words 
         localsecs += result[3] #aggregate time )      
     return localwords, localsecs
         
@@ -127,6 +166,7 @@ def getTranslations(filename,root):
         'Free Translation',
         'Free Translation (English)',
         'ft',
+        'fte', 
         'tf (free translation)',
         'tf (free translation)',
         'tf_eng (free english translation)',
@@ -138,6 +178,7 @@ def getTranslations(filename,root):
         'Traducción',
         'Traduction',
         'translation', 
+        'translations', 
         'Translation', 
       ]
     translations = []
@@ -166,6 +207,9 @@ def getTranslations(filename,root):
                     logging.warning('ignored %.2f%% probability English for "%s ..."' %(toplanguage.prob*100,' '.join(wordlist)[:100]))
                     continue  
                 translations.append(wordlist)
+                
+    #if translations == []:
+      #print(filename, [x.attrib["LINGUISTIC_TYPE_ID"] for x in root.findall(".//LINGUISTIC_TYPE")]) 
     return translations
                                 
     
@@ -189,18 +233,18 @@ if __name__ == "__main__":
     except IndexError: #no positional argument provided. Default is working directory
             filename = '.'
     print("processing", filename)
-    if os.path.isfile(filename): #argument is a single file
+    if os.path.isfile(filename): #argument is a single file FIXME currently broken
         root = etree.parse(filename)
         timeslots = getTimeslots(root)
         alignableannotations = getAlignableAnnotations(root) 
-        seconds, words = summarizeTranscription(root,timeslots,alignableannotations) 
-        print("%s words (%s seconds)" % (seconds, words))   
+        seconds, words = summarizeTranscription(root,timeslots,alignableannotations,filename) 
+        print("%s words (%s seconds)" % (len(words), seconds))   
         translations = getTranslations(filename, root)
         translationsummary = [len(x) for x in translations]
         print("translation length: %s words" %(sum([len(x) for x in translations])))       
     elif os.path.isdir(filename): #argument is a directory
         limit = 999999999
-        #limit = 1300 #for development purposes, only process a subset of a directory
+        #limit = 13 #for development purposes, only process a subset of a directory
         eafs = glob.glob("%s/*eaf"%filename)[:limit]
         #default values for output
         globalwords = 0
@@ -208,6 +252,7 @@ if __name__ == "__main__":
         hours = "00:00:00"
         
         eaftranslations = {} #match filenames with the translations they contain
+        eaftranscriptions = {} #match filenames with the transcriptions they contain
         for eaf in eafs:  
             try:
                 root = etree.parse(eaf)
@@ -219,11 +264,16 @@ if __name__ == "__main__":
             except KeyError:                 
                 logging.warning("skipping %s (no time slots)" % eaf)
                 continue
+            except AttributeError:                 
+                logging.warning("skipping %s (no time slots)" % eaf)
+                continue
             #get transcription info
             alignableannotations = getAlignableAnnotations(root)                   
-            transcriptionresults = summarizeTranscription(root,timeslots,alignableannotations)
-            globalwords += transcriptionresults[0]
+            transcriptionresults = summarizeTranscription(root,timeslots,alignableannotations,eaf)
+            transcriptions = [t for t in transcriptionresults[0]] 
+            globalwords += sum([len(transcription) for transcription in transcriptions])
             globalsecs += transcriptionresults[1]
+            eaftranscriptions[eaf] = transcriptions
             #get translation info
             translations = getTranslations(eaf, root)
             eaftranslations[eaf] = translations
@@ -234,7 +284,9 @@ if __name__ == "__main__":
         hours = str(datetime.timedelta(seconds=globalsecs)).split('.')[0] #convert to human readable format 
         #save translations
         with open('translations.json', 'w') as jsonfile: 
-            jsonfile.write(json.dumps(eaftranslations))
+            jsonfile.write(json.dumps(eaftranslations, sort_keys=True,  ensure_ascii=False, indent=4))
+        with open('transcriptions.json', 'w') as jsonfile: 
+            jsonfile.write(json.dumps(eaftranscriptions, sort_keys=True, ensure_ascii=False, indent=4))
         #print results
         print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs), filename, hours, globalwords))
         print("Total translations into English have %i words in %i files of directory %s/ (of total %i files)" % (englishwordcount, len([x for x in eaftranslations if eaftranslations[x] != []]), os.path.abspath(filename).split('/')[-1], len(eaftranslations)))

@@ -22,6 +22,8 @@ def analyze_tier(d, level):
         code = 't'
     elif constraint == 'Included_In':
         code = 'i'
+    elif constraint == 'root':
+        code = 'R'
     elif constraint == '':
         code = 'x'
     elif constraint is None:
@@ -73,7 +75,7 @@ def check_tiers(filename):
                                )
     #start with dummy tier
     analyze_tier({'id':filename,
-                  'constraint': '',
+                  'constraint': 'root',
                   'ltype': ''
                  },
                  0
@@ -86,7 +88,8 @@ if __name__ == "__main__":
     # fingerprint each file
     # tally fingerprints and show the results
 
-    LIMIT = 1111
+    LIMIT = 999999
+    #LIMIT = 11
     DEFAULTDIRECTORY = 'elareafs'
     directory = DEFAULTDIRECTORY
     try:

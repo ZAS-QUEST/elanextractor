@@ -14,11 +14,11 @@ def analyze_tier(d, level):
     global tierconstraints
     constraint = d['constraint']
     code = 'x'
-    if constraint == 'Symbolic_Subdivision':
+    if constraint == 'Symbolic_Subdivision' or constraint == 'Symbolic Subdivision':
         code = 's'
-    elif constraint == 'Symbolic_Association':
+    elif constraint == 'Symbolic_Association' or constraint == 'Symbolic Association' :
         code = 'a'
-    elif constraint == 'Time_Subdivision':
+    elif constraint == 'Time_Subdivision' or constraint == 'Time Subdivision':
         code = 't'
     elif constraint == 'Included_In':
         code = 'i'
@@ -32,9 +32,16 @@ def analyze_tier(d, level):
         print(repr(constraint))
         0/0
     #accumulator += "%s%s--%s\n"%('  '*level, d['id'], constraint)
-    accumulator += "%s%s%s|"%('.'*level, '', code)
-    for child in dico.get(d['id'], []):
-        analyze_tier(child, level+1)
+    #accumulator += "%s%s%s|"%('.'*level, '', code)
+    accumulator += code
+    children = dico[d['id']] 
+    if children == []:
+        return
+    accumulator += '['
+    for child in children:
+        analyze_tier(child, level+1)        
+    accumulator += ']'
+        
 
 def check_tiers(filename):
     """
@@ -52,7 +59,7 @@ def check_tiers(filename):
     global dico
     global tierconstraints
 
-    accumulator = ''
+    accumulator = '['
     dico = defaultdict(list)
     try:
         tree = etree.parse(filename)
@@ -67,7 +74,11 @@ def check_tiers(filename):
         #map all tiers to their parent tiers, defaulting to the file itself
         PARENT_REF = tier.attrib.get("PARENT_REF", (filename))
         ltype = tier.attrib["LINGUISTIC_TYPE_REF"]
-        constraint = tierconstraints[ltype]
+        try:
+            constraint = tierconstraints[ltype]
+        except KeyError:
+            print("reference to unknown LINGUISTIC_TYPE_ID  %s when establishing constraints in %s" %(ltype,filename))
+            continue
         dico[PARENT_REF].append({'id': ID,
                                  'constraint': constraint,
                                  'ltype': ltype
@@ -79,7 +90,8 @@ def check_tiers(filename):
                   'ltype': ''
                  },
                  0
-                )
+                )    
+    accumulator += ']'
     return accumulator
 
 if __name__ == "__main__":
@@ -88,8 +100,8 @@ if __name__ == "__main__":
     # fingerprint each file
     # tally fingerprints and show the results
 
-    LIMIT = 999999
-    #LIMIT = 11
+    LIMIT = 999999 
+    #LIMIT = 11 
     DEFAULTDIRECTORY = 'elareafs'
     directory = DEFAULTDIRECTORY
     try:

@@ -8,6 +8,7 @@ from langdetect import detect_langs, lang_detect_exception  #for language identi
 langdetectthreshold = .95 #85% seems to have no false positives in a first run
 import logging
 logging.basicConfig(filename='elanstatistics.log',level=logging.WARNING)
+import pprint
 
 
 def getTimeslots(root):
@@ -45,7 +46,7 @@ def getDuration(annotation):
     return 0
   
 
-def countVernacularWords(root,timeslots,alignableannotations,filename):
+def getVernacularWords(root,timeslots,alignableannotations,filename):
   """
   Retrieve tiers with transcription in an ELAN file. 
   Return the ID of the first tier found, the linguistic type matched, aggregate number of words, aggregate time. 
@@ -121,17 +122,18 @@ def countVernacularWords(root,timeslots,alignableannotations,filename):
         'vilela',
         'Vilela',
         'word-txt', 
-        'Word', 
-        'word', 
+        #'Word', #probably more often used for glossing 
+        #'word', #probably more often used for glossing 
         'word_orthography',
-        'words', 
-        'Words',
+        #'words', #probably more often used for glossing 
+        #'Words', #more often used for glossing 
         'default transcript',
         '句子',
         '句子 ',
         '句子 '
       ]
-  results = []
+  transcriptions = {}
+  time_in_seconds = []
   tierfound = False
   for candidate in transcriptioncandidates:   
         #try different LINGUISTIC_TYPE_REF's to identify the relevant tiers
@@ -140,16 +142,15 @@ def countVernacularWords(root,timeslots,alignableannotations,filename):
         if vernaculartiers != []: #we found a tier of the linguistic type
             tierfound = True
             for t in vernaculartiers: 
+                tierID =  t.attrib["TIER_ID"]
                 #create a list of all words in that tier by splitting and collating all annotation values of that tier
-                wordlist = [av.text
-                            #val #flatten list
-                            #for sublist in [av.text.split() 
+                wordlist = [av.text.strip() 
                                             for av in t.findall(".//ANNOTATION_VALUE")
-                                            if av.text!=None
-                                            #] 
-                            #for val in sublist
+                                            if av.text!=None 
                             ]  
-                #get a list of duration from the time slots directly mentioned in annotations
+                #get a list of duration from the time slots directly mentioned in annotations 
+                if wordlist == []:
+                    continue 
                 timelist = [getDuration(aa) 
                             for aa in t.findall(".//ALIGNABLE_ANNOTATION")
                             if aa.find(".//ANNOTATION_VALUE").text!=None
@@ -159,24 +160,34 @@ def countVernacularWords(root,timeslots,alignableannotations,filename):
                             for ra in t.findall(".//REF_ANNOTATION")
                             if ra.find(".//ANNOTATION_VALUE").text!=None
                             ]     
-                secs = sum(timelist+timelistannno)/1000          
+                secs = sum(timelist+timelistannno)/1000    
+                time_in_seconds.append(secs)
+                try:
+                    transcriptions[candidate][tierID] = wordlist
+                except KeyError:
+                    transcriptions[candidate] = {}
+                    transcriptions[candidate][tierID] = wordlist
+                
+                
                 #output the amount found with tier type and ID
-                results.append((t.attrib["TIER_ID"],candidate,wordlist,secs)) 
+                #results.append((t.attrib["TIER_ID"],candidate,wordlist,secs)) 
   if not tierfound: #there is no tier of the relevant type 
       print(filename, list(set([x.attrib["LINGUISTIC_TYPE_REF"] for x in root.findall(".//TIER")]))) 
-  return results  
+  return transcriptions, time_in_seconds 
 
 
-def summarizeTranscription(root,timeslots,alignableannotations,filename):       
-    """ compute total amounts of words and seconds transcribed """
+#def getTranscription(root,timeslots,alignableannotations,filename):       
+    #""" compute total amounts of words and seconds transcribed """
     
-    results = countVernacularWords(root,timeslots,alignableannotations, filename) 
-    localwords = []
-    localsecs = 0
-    for result in results:
-        localwords.append(result[2]) #aggregate words 
-        localsecs += result[3] #aggregate time )      
-    return localwords, localsecs
+    #results = getVernacularWords(root,timeslots,alignableannotations, filename) 
+    #localwords = []
+    #localsecs = 0
+    #for result in results:
+        #tierID = result[0]
+        #tiertype = result[1]
+        #localwords.append(result[2]) #aggregate words 
+        #localsecs += result[3] #aggregate time )      
+    #return localwords, localsecs, tierID, tiertype
         
     
 def getTranslations(filename,root): 
@@ -216,19 +227,20 @@ def getTranslations(filename,root):
         'Translation', 
         '翻译'
       ]
-    translations = []
+    translations = {}
     for candidate in translationcandidates:  
         querystring = "TIER[@LINGUISTIC_TYPE_REF='%s']"%candidate 
         translationtiers = root.findall(querystring) 
         if translationtiers != []: #we found a tier of the linguistic type
-            for t in translationtiers:  
+            for t in translationtiers:
+                tierID =  t.attrib["TIER_ID"]
                 #create a list of all words in that tier
                 wordlist = [av.text for av   
                                     in t.findall(".//ANNOTATION_VALUE")
                                     if av.text!=None
                             ]  
                 if wordlist == []:
-                    continue 
+                    continue  
                 #sometimes, annotators put non-English contents in translation tiers
                 #for our purposes, we want to discard such content
                 try: #detect candidate languages and retrieve most likely one
@@ -241,7 +253,11 @@ def getTranslations(filename,root):
                 if toplanguage.prob < langdetectthreshold: #language is English, but likelihood is too small
                     logging.warning('ignored %.2f%% probability English for "%s ..."' %(toplanguage.prob*100,' '.join(wordlist)[:100]))
                     continue  
-                translations.append(wordlist)
+                try:
+                    translations[candidate][tierID] = wordlist
+                except KeyError:
+                    translations[candidate] = {}
+                    translations[candidate][tierID] = wordlist
                 
     #if translations == []:
       #print(filename, [x.attrib["LINGUISTIC_TYPE_ID"] for x in root.findall(".//LINGUISTIC_TYPE")]) 
@@ -272,23 +288,24 @@ if __name__ == "__main__":
         root = etree.parse(filename)
         timeslots = getTimeslots(root)
         alignableannotations = getAlignableAnnotations(root) 
-        seconds, words = summarizeTranscription(root,timeslots,alignableannotations,filename) 
+        seconds, words = getTranscription(root,timeslots,alignableannotations,filename) 
         print("%s words (%s seconds)" % (len(words), seconds))   
         translations = getTranslations(filename, root)
         translationsummary = [len(x) for x in translations]
         print("translation length: %s words" %(sum([len(x) for x in translations])))       
     elif os.path.isdir(filename): #argument is a directory
         limit = 999999999
-        #limit = 13 #for development purposes, only process a subset of a directory
+        limit = 113 #for development purposes, only process a subset of a directory
         eafs = glob.glob("%s/*eaf"%filename)[:limit]
         #default values for output
-        globalwords = 0
-        globalsecs = 0
+        globalwordcount = 0
+        globalsecondcount = 0
         hours = "00:00:00"
         
         eaftranslations = {} #match filenames with the translations they contain
         eaftranscriptions = {} #match filenames with the transcriptions they contain
         for eaf in eafs:  
+            print(eaf)
             try:
                 root = etree.parse(eaf)
             except etree.XMLSyntaxError:
@@ -304,26 +321,32 @@ if __name__ == "__main__":
                 continue
             #get transcription info
             alignableannotations = getAlignableAnnotations(root)                   
-            transcriptionresults = summarizeTranscription(root,timeslots,alignableannotations,eaf)
-            transcriptions = [t for t in transcriptionresults[0]] 
-            globalwords += sum([len(transcription) for transcription in transcriptions])
-            globalsecs += transcriptionresults[1]
-            eaftranscriptions[eaf] = transcriptions
-            #get translation info
-            translations = getTranslations(eaf, root)
-            eaftranslations[eaf] = translations
-            translationsummary = [len(x) for x in translations]
+            transcriptionresults = getVernacularWords(root,timeslots,alignableannotations,eaf)
+            print(transcriptionresults)
+            transcriptiontiers = transcriptionresults[0]  
+            #transcriptions = [t for t in transcriptionresults[0]] 
+            globalwordcount += sum([len(tier) for tier in transcriptiontiers])
+            #print(globalwordcount)
+            ##globalsecondcount += transcriptionresults[1] 
+            times = transcriptionresults[1] 
+            #tiertype = transcriptionresults[3]  
+            eaftranscriptions[eaf] = transcriptionresults[0]
+            ##get translation info
+            #translations = getTranslations(eaf, root)
+            #eaftranslations[eaf] = translations
+            #translationsummary = [len(x) for x in translations]
         
         #compute statistics
+        pprint.pprint(eaftranslations)
         englishwordcount = sum([len(tier) for key in eaftranslations for tier in eaftranslations[key]])
-        hours = str(datetime.timedelta(seconds=globalsecs)).split('.')[0] #convert to human readable format 
+        #hours = str(datetime.timedelta(seconds=globalsecondcount)).split('.')[0] #convert to human readable format 
         #save translations
         with open('translations.json', 'w') as jsonfile: 
             jsonfile.write(json.dumps(eaftranslations, sort_keys=True,  ensure_ascii=False, indent=4))
         with open('transcriptions.json', 'w') as jsonfile: 
             jsonfile.write(json.dumps(eaftranscriptions, sort_keys=True, ensure_ascii=False, indent=4))
         #print results
-        print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs), filename, hours, globalwords))
+        #print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs), filename, hours, globalwordcount))
         print("Total translations into English have %i words in %i files of directory %s/ (of total %i files)" % (englishwordcount, len([x for x in eaftranslations if eaftranslations[x] != []]), os.path.abspath(filename).split('/')[-1], len(eaftranslations)))
     else: #invalid argument
         print("path %s could not be found" %filename)

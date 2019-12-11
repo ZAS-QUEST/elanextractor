@@ -295,7 +295,7 @@ if __name__ == "__main__":
         print("translation length: %s words" %(sum([len(x) for x in translations])))       
     elif os.path.isdir(filename): #argument is a directory
         limit = 999999999
-        limit = 113 #for development purposes, only process a subset of a directory
+        #limit = 113 #for development purposes, only process a subset of a directory
         eafs = glob.glob("%s/*eaf"%filename)[:limit]
         #default values for output
         globalwordcount = 0
@@ -304,8 +304,7 @@ if __name__ == "__main__":
         
         eaftranslations = {} #match filenames with the translations they contain
         eaftranscriptions = {} #match filenames with the transcriptions they contain
-        for eaf in eafs:  
-            print(eaf)
+        for eaf in eafs:   
             try:
                 root = etree.parse(eaf)
             except etree.XMLSyntaxError:
@@ -322,7 +321,6 @@ if __name__ == "__main__":
             #get transcription info
             alignableannotations = getAlignableAnnotations(root)                   
             transcriptionresults = getVernacularWords(root,timeslots,alignableannotations,eaf)
-            print(transcriptionresults)
             transcriptiontiers = transcriptionresults[0]  
             #transcriptions = [t for t in transcriptionresults[0]] 
             globalwordcount += sum([len(tier) for tier in transcriptiontiers])
@@ -332,9 +330,9 @@ if __name__ == "__main__":
             #tiertype = transcriptionresults[3]  
             eaftranscriptions[eaf] = transcriptionresults[0]
             ##get translation info
-            #translations = getTranslations(eaf, root)
-            #eaftranslations[eaf] = translations
-            #translationsummary = [len(x) for x in translations]
+            translations = getTranslations(eaf, root)
+            eaftranslations[eaf] = translations
+            translationsummary = [len(x) for x in translations]
         
         #compute statistics
         pprint.pprint(eaftranslations)

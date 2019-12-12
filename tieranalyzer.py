@@ -4,8 +4,9 @@ import pprint
 from collections import Counter
 from collections import defaultdict
 from lxml import etree
-
+from random import shuffle
 import matplotlib.pyplot as plt 
+from matplotlib import cm
 import squarify     
 
 
@@ -109,7 +110,7 @@ if __name__ == "__main__":
     # retrieve all ELAN files and check for tiers
     # analyze tiers for each file
     # fingerprint each file
-    # tally fingerprints and show the results
+    # tally fingerprints and write the results
 
     LIMIT = 999999 
     #LIMIT = 111 
@@ -124,16 +125,15 @@ if __name__ == "__main__":
     #count occurences
     counted_fingerprints = Counter(fingerprints)
     #sort by number of occurences and print
-    ranks = sorted([(counted_fingerprints[key], key) for key in counted_fingerprints.keys()])
-    values = [x[0] for x in ranks]
-    print(values)
-    squarify.plot(sizes=values) 
+    ranks = sorted([(counted_fingerprints[key], key) for key in counted_fingerprints.keys()])[::-1]
+    values = [x[0] for x in ranks] 
+    squarify.plot(sizes=values, label=values[:38], color=[cm.pink(x*.1) for x in [2,8,4,7,1,6,3,9,5]]) 
     plt.axis('off') 
     plt.savefig('tiertypetreemap.png')
     with open("tierranks.txt", 'w') as out:
         out.write("\n".join(["%s:%s" % x
                      for x
-                     in ranks[::-1]
+                     in ranks
                     ]
                    )
          )

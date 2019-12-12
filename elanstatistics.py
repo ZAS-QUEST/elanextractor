@@ -54,28 +54,17 @@ def getVernacularWords(root,timeslots,alignableannotations,filename):
   
   #the LINGUISTIC_TYPE_REF's which contain vernacular sentences
   transcriptioncandidates = [
-        'Dusun',
-        'Hakhun orthography',
-        'speech',         
-        'Standardised-phonology',
-        'Texto principal', 
-        'tl',#check this 
-        'Transcribe',
-        'Transcript',
-        'trs@',
-        'trs1',
-        'Transcripcion',
-        'transcripción',
-        'Transcripcion chol',
         'arta',
         'Arta',
         'conversación',
         'default-lt',#needs qualification
         'default-lt',
+        'Dusun',
         'en', #very experimental, could be used for English but is used in 0214 files
         'Fonética',
         'Frases', 
         'Hablado',
+        'Hakhun orthography',
         'Hija',
         'hija',
         'ilokano',
@@ -96,29 +85,41 @@ def getVernacularWords(root,timeslots,alignableannotations,filename):
         'orthografía',
         'orthography',
         'po (practical orthography)',
+        'phrase',
         'Phrases',
         'Practical Orthography',
         'sentences',
+        'speech',         
+        'Standardised-phonology',
         'Sumi',
         't',#check this
         'Tamang',
         'text',
         'Text',
+        'Text ',
         'texto',
         'Texto',
         'texto ',
+        'Texto principal', 
+        'tl',#check this 
         'time aligned',#check this
         'timed chunk',
         'tl',#check this
-        'transcript', 
-        'transcription', 
-        'transcription', 
-        'transcription_orthography',
-        'trs',
-        'Transcription',
-        'Transcripción',
+        'Transcribe',
         'Transcrição',
         'TRANSCRIÇÃO',
+        'Transcript',
+        'Transcripción',
+        'Transcripcion',
+        'transcripción',
+        'Transcripcion chol',
+        'transcript', 
+        'Transcription',
+        'transcription',  
+        'transcription_orthography',
+        'trs',
+        'trs@',
+        'trs1',
         'tx', #check usages of this 
         'tx2', #check usages of this 
         'txt',
@@ -128,6 +129,7 @@ def getVernacularWords(root,timeslots,alignableannotations,filename):
         'Utterance',
         'utterance',
         'utterances',
+        'Utterances',
         'utterance transcription',
         'UtteranceType', 
         'vernacular', 
@@ -211,14 +213,6 @@ def getTranslations(filename,root):
     """
         
     translationcandidates = [
-        'Free-translation', 
-        'tf (free translation)',
-        'trad1',
-        'Traducción Español',
-        'Tradución',
-        'Traduccion',
-        'Translate',
-        'Translation', 
         'eng', 
         'english translation',
         'English translation',
@@ -228,15 +222,21 @@ def getTranslations(filename,root):
         'fr',
         'free translation',
         'Free Translation',
+        'Free-translation', 
         'Free Translation (English)',
         'ft',
         'fte', 
-        'tf (free translation)',
-        'tf (free translation)',
-        'tf_eng (free english translation)',
+        'tf (free translation)', 
+        'Translation', 
         'tl',
         'tn',
         'tn (translation in lingua franca)',
+        'tf_eng (free english translation)',
+        'trad1',
+        'Traducción Español',
+        'Tradución',
+        'Traduccion',
+        'Translate',
         'trad',
         'traduccion', 
         'traducción',
@@ -356,7 +356,7 @@ if __name__ == "__main__":
             translationsummary = [len(x) for x in translations]
         
         #compute statistics
-        pprint.pprint(eaftranslations)
+        #pprint.pprint(eaftranslations)
         englishwordcount = sum([len(tier) for key in eaftranslations for tier in eaftranslations[key]])
         #hours = str(datetime.timedelta(seconds=globalsecondcount)).split('.')[0] #convert to human readable format 
         #save translations

@@ -75,6 +75,7 @@ def getVernacularWords(root,timeslots,alignableannotations,filename):
         'Madre',
         'madre',
         'Matanvat text',
+        'Matanvat Text',
         'Nese Utterances', 
         'o', 
         'or',   
@@ -83,9 +84,11 @@ def getVernacularWords(root,timeslots,alignableannotations,filename):
         'orthografia',
         'orthografía',
         'orthography',
+        'othography', #sic
         'po',
         'po (practical orthography)',
         'phrase',
+        'phrase-item',
         'Phrases',
         'Practical Orthography',
         'sentences',
@@ -94,6 +97,7 @@ def getVernacularWords(root,timeslots,alignableannotations,filename):
         'Sumi',
         't',#check this
         'Tamang',
+        'texo ',
         'text',
         'Text',
         'Text ',
@@ -146,6 +150,7 @@ def getVernacularWords(root,timeslots,alignableannotations,filename):
         'word_orthography',
         #'words', #probably more often used for glossing 
         #'Words', #more often used for glossing 
+        'xv',
         'default transcript',
         '句子',
         '句子 ',
@@ -251,6 +256,7 @@ def getTranslations(filename,root):
         'translation', 
         'translations', 
         'Translation', 
+        'xe',
         '翻译'
       ]
     translations = {}
@@ -322,7 +328,7 @@ if __name__ == "__main__":
     elif os.path.isdir(filename): #argument is a directory
         limit = 999999999
         #limit = 113 #for development purposes, only process a subset of a directory
-        eafs = glob.glob("%s/*eaf"%filename)[:limit]
+        eafs = sorted(glob.glob("%s/*eaf"%filename))[:limit]
         #default values for output
         globalwordcount = 0
         globalsecondcount = 0

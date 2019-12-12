@@ -54,109 +54,7 @@ def getVernacularWords(root,timeslots,alignableannotations,filename):
   """
   
   #the LINGUISTIC_TYPE_REF's which contain vernacular sentences
-  transcriptioncandidates = [
-        'arta',
-        'Arta',
-        'conversación',
-        'default-lt',#needs qualification
-        'default-lt',
-        'Dusun',
-        'en', #very experimental, could be used for English but is used in 0214 files
-        'Fonética',
-        'Frases', 
-        'Hablado',
-        'Hakhun orthography',
-        'Hija',
-        'hija',
-        'ilokano',
-        'interlinear-text-item',
-        'Ikaan sentences',
-        'Khanty Speech',  
-        'main-tier',
-        'Madre',
-        'madre',
-        'Matanvat text',
-        'Matanvat Text',
-        'Nese Utterances', 
-        'o', 
-        'or',   
-        'orth',
-        'orthT',
-        'orthografia',
-        'orthografía',
-        'orthography',
-        'othography', #sic
-        'po',
-        'po (practical orthography)',
-        'phrase',
-        'phrase-item',
-        'Phrases',
-        'Practical Orthography',
-        'sentences',
-        'speech',         
-        'Standardised-phonology',
-        'Sumi',
-        't',#check this
-        'Tamang',
-        'texo ',
-        'text',
-        'Text',
-        'Text ',
-        'texto',
-        'Texto',
-        'texto ',
-        'Texto principal',
-        'Texto Principal',
-        'tl',#check this 
-        'time aligned',#check this
-        'timed chunk',
-        'tl',#check this
-        'Transcribe',
-        'Transcrição',
-        'TRANSCRIÇÃO',
-        'Transcript',
-        'Transcripción chol',
-        'transcripción chol', 
-        'Transcripción',
-        'Transcripcion',
-        'transcripción',
-        'Transcripcion chol',
-        'transcript', 
-        'Transcription',
-        'transcription',  
-        'transcription_orthography',
-        'trs',
-        'trs@',
-        'trs1',
-        'tx', #check usages of this 
-        'tx2', #check usages of this 
-        'txt',
-        'type_utterance',
-        'unit', #some Dutch texts from TLA
-        'ut', 
-        'utt',
-        'Utterance',
-        'utterance',
-        'utterances',
-        'Utterances',
-        'utterance transcription',
-        'UtteranceType', 
-        'vernacular', 
-        'Vernacular', 
-        'vilela',
-        'Vilela',
-        'word-txt', 
-        #'Word', #probably more often used for glossing 
-        #'word', #probably more often used for glossing 
-        'word_orthography',
-        #'words', #probably more often used for glossing 
-        #'Words', #more often used for glossing 
-        'xv',
-        'default transcript',
-        '句子',
-        '句子 ',
-        '句子 '
-      ]
+  transcriptioncandidates = transcriptiontiernames
   transcriptions = {}
   time_in_seconds = []
   tierfound = False
@@ -222,44 +120,7 @@ def getTranslations(filename,root):
     Return a list of all tiers with lists of all words they contain in linear order 
     """
         
-    translationcandidates = [
-        'eng', 
-        'english translation',
-        'English translation',
-        'fe',
-        'fg',
-        'fn',
-        'fr',
-        'free translation',
-        'Free Translation',
-        'Free-translation', 
-        'Free Translation (English)',
-        'ft',
-        'fte', 
-        'tf (free translation)', 
-        'Translation', 
-        'tl',
-        'tn',
-        'tn (translation in lingua franca)',
-        'tf_eng (free english translation)',
-        'trad1',
-        'Traducción Español',
-        'Tradución', 
-        'Traduccion',
-        'Translate',
-        'trad',
-        'traduccion', 
-        'traducción',
-        'traducción ', 
-        'Traducción',
-        'Traducción español',
-        'Traduction',
-        'translation', 
-        'translations', 
-        'Translation', 
-        'xe',
-        '翻译'
-      ]
+    translationcandidates = translationtiernames
     translations = {}
     for candidate in translationcandidates:  
         querystring = "TIER[@LINGUISTIC_TYPE_REF='%s']"%candidate 
@@ -372,9 +233,9 @@ if __name__ == "__main__":
         englishwordcount = sum([len(tier) for key in eaftranslations for tier in eaftranslations[key]])
         #hours = str(datetime.timedelta(seconds=globalsecondcount)).split('.')[0] #convert to human readable format 
         #save translations
-        with open('translations.json', 'w') as jsonfile: 
+        with open('%s-translations.json'%filename, 'w') as jsonfile: 
             jsonfile.write(json.dumps(eaftranslations, sort_keys=True,  ensure_ascii=False, indent=4))
-        with open('transcriptions.json', 'w') as jsonfile: 
+        with open('%s-transcriptions.json'%filename, 'w') as jsonfile: 
             jsonfile.write(json.dumps(eaftranscriptions, sort_keys=True, ensure_ascii=False, indent=4))
         #print results
         #print("Processed %i files in %s.\n%s transcribed in %i words." % (len(eafs), filename, hours, globalwordcount))

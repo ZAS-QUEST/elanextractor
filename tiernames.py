@@ -76,6 +76,7 @@ transcriptiontiernames = [
         'phrase-item',
         'Phrases',
         'Practical Orthography',
+        'sentence',
         'sentences',
         'speech',         
         'Standardised-phonology',
@@ -121,7 +122,9 @@ transcriptiontiernames = [
         'utt',
         'Utterance',
         'utterance',
+        'uterrances', #sic
         'utterances',
+        'utterrances', #sic
         'Utterances',
         'utterance transcription',
         'UtteranceType', 

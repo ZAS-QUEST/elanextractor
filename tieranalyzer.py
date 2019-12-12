@@ -5,9 +5,13 @@ from collections import Counter
 from collections import defaultdict
 from lxml import etree
 
+import matplotlib.pyplot as plt 
+import squarify     
 
 
-def analyze_tier(d, level):
+
+
+def analyze_tier(d, level, lump=False):
     """analyze a tier and its children"""
 
     global accumulator
@@ -19,9 +23,15 @@ def analyze_tier(d, level):
     elif constraint == 'Symbolic_Association' or constraint == 'Symbolic Association' :
         code = 'a'
     elif constraint == 'Time_Subdivision' or constraint == 'Time Subdivision':
-        code = 't'
+        if lump:
+            code = 's'
+        else:
+            code = 't'
     elif constraint == 'Included_In':
-        code = 'i'
+        if lump:
+            code = 's'
+        else:
+            code = 'i'
     elif constraint == 'root':
         code = 'R'
     elif constraint == '':
@@ -39,11 +49,11 @@ def analyze_tier(d, level):
         return
     accumulator += '['
     for child in children:
-        analyze_tier(child, level+1)        
+        analyze_tier(child, level+1, lump=lump)        
     accumulator += ']'
         
 
-def check_tiers(filename):
+def check_tiers(filename, lump=False):
     """
     check the tiers there are in a given file and
     return a fingerprint describing the structure
@@ -89,7 +99,8 @@ def check_tiers(filename):
                   'constraint': 'root',
                   'ltype': ''
                  },
-                 0
+                 0,
+                 lump=lump
                 )    
     accumulator += ']'
     return accumulator
@@ -101,21 +112,28 @@ if __name__ == "__main__":
     # tally fingerprints and show the results
 
     LIMIT = 999999 
-    #LIMIT = 11 
+    #LIMIT = 111 
     DEFAULTDIRECTORY = 'elareafs'
     directory = DEFAULTDIRECTORY
     try:
         directory = sys.argv[1]
     except IndexError:
         pass
-    fingerprints = [check_tiers(f) for f in glob.glob("%s/*eaf"%directory)[:LIMIT]]
+    lump = True
+    fingerprints = [check_tiers(f, lump=lump) for f in glob.glob("*eafs/*eaf")[:LIMIT]]
     #count occurences
     counted_fingerprints = Counter(fingerprints)
     #sort by number of occurences and print
-    ranks = [(counted_fingerprints[key], key) for key in counted_fingerprints.keys()]
-    print("\n".join(["%s:%s" % x
+    ranks = sorted([(counted_fingerprints[key], key) for key in counted_fingerprints.keys()])
+    values = [x[0] for x in ranks]
+    print(values)
+    squarify.plot(sizes=values) 
+    plt.axis('off') 
+    plt.savefig('tiertypetreemap.png')
+    with open("tierranks.txt", 'w') as out:
+        out.write("\n".join(["%s:%s" % x
                      for x
-                     in sorted(ranks)[::-1]
+                     in ranks[::-1]
                     ]
                    )
          )

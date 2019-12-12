@@ -9,6 +9,7 @@ langdetectthreshold = .95 #85% seems to have no false positives in a first run
 import logging
 logging.basicConfig(filename='elanstatistics.log',level=logging.WARNING)
 import pprint
+from tiernames import translationtiernames, transcriptiontiernames
 
 
 def getTimeslots(root):

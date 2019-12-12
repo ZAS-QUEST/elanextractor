@@ -54,6 +54,19 @@ def getVernacularWords(root,timeslots,alignableannotations,filename):
   
   #the LINGUISTIC_TYPE_REF's which contain vernacular sentences
   transcriptioncandidates = [
+        'Dusun',
+        'Hakhun orthography',
+        'speech',         
+        'Standardised-phonology',
+        'Texto principal', 
+        'tl',#check this 
+        'Transcribe',
+        'Transcript',
+        'trs@',
+        'trs1',
+        'Transcripcion',
+        'transcripción',
+        'Transcripcion chol',
         'arta',
         'Arta',
         'conversación',
@@ -198,6 +211,14 @@ def getTranslations(filename,root):
     """
         
     translationcandidates = [
+        'Free-translation', 
+        'tf (free translation)',
+        'trad1',
+        'Traducción Español',
+        'Tradución',
+        'Traduccion',
+        'Translate',
+        'Translation', 
         'eng', 
         'english translation',
         'English translation',

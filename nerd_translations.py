@@ -17,8 +17,14 @@ def nerd_text(text):
     #extract names and wikidataId's
     return [(x["rawName"], x["wikidataId"])
             for x in retrieved_entities
-            if x.get("wikidataId")
+            if x.get("wikidataId") and x["wikidataId"] not in blacklist
            ]
+
+blacklist = [
+    "Q7946755", #'wasn', radio station
+    "Q3089073", #'happy, happy', norwegian comedy film
+    "Q19893364",#'Inside The Tree', music album
+    ]
 
 if __name__ == "__main__":
     FILENAME = sys.argv[1]

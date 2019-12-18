@@ -8,11 +8,13 @@ def nerd_text(text):
     """sent text to online resolver and retrieve wikidataId's"""
 
     url = "http://cloud.science-miner.com/nerd/service/disambiguate"
-    if len(text.split()) < 5:
+    if len(text.split()) < 5: #cannot do NER on less than 5 words
         return []
+    #send text 
     rtext = requests.post(url, json={"text": text}).text
-    # pprint.pprint(rtext)
+    #parse json
     retrieved_entities = json.loads(rtext).get("entities", [])
+    #extract names and wikidataId's
     return [(x["rawName"], x["wikidataId"])
             for x in retrieved_entities
             if x.get("wikidataId")
@@ -31,11 +33,14 @@ if __name__ == "__main__":
     # LIMIT = 4
     for i, key in enumerate(list(JSONFILE.keys())[OFFSET:LIMIT]):
         print(i, key)
+        #setup dictionary to store filenames as keys and entities as values
         FOUND_ENTITIES[key] = {}
         for type_ in JSONFILE[key]:
             print(" ", type_)
             for tier in JSONFILE[key][type_]:
                 print("  ", tier)
+                #the json file holds a list of sentences
+                #we collate them to one large paragraph
                 collated_text = ". ".join(JSONFILE[key][type_][tier])
                 entities = nerd_text(collated_text)
                 for entity in entities:
